@@ -49,10 +49,6 @@ fn parse_pipe(c: char) -> u8 {
     }
 }
 
-// fn get_start_pipe(pos: (usize, usize), map: &Map) -> Pipe {
-//
-// }
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Dir { N, S, E, W }
 
