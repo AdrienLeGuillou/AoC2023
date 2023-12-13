@@ -1,101 +1,17 @@
 fn main() {
     let input = std::fs::read_to_string("input.txt").unwrap();
 
+    // Part1 -------------------------------------------------------------------
     let records: Vec<Record> = input.lines().map(Record::parse).collect();
-
-    // println!("{:?}", car(&records[0].inner, &records[0].groups));
-    // println!("{:?}", get_ranges(&records[2].inner, 1));
-
-    // println!("e1: {:?} / 1", records[0].count_argm());
-    // println!("e2: {:?} / 4", records[1].count_argm());
-    // println!("e3: {:?} / 1", records[2].count_argm());
-    // println!("e4: {:?} / 1", records[3].count_argm());
-    // println!("e5: {:?} / 4", records[4].count_argm());
-    // println!("e6: {:?} / 10", records[5].count_argm());
-    // println!("e7: {:?} / ?", records[6].count_argm());
-
-    // println!("{:?}", get_ranges(&records[998].inner[0..15], 2));
-
-    // println!("done: {:?}", records[25 - 1].count_argm());
 
     let answ = records.iter().fold(0, |a, x| a + x.count_argm());
     println!("p1: {answ}");
 
     // Part2 -------------------------------------------------------------------
     let records: Vec<Record> = records.iter().map(|x| x.part2()).collect();
-    // println!("{:?}", records[0]);
-    //
-    // println!("e1: {:?} / 1", records[0].count_argm());
-    // println!("e2: {:?} / 4", records[1].count_argm());
-    // println!("e3: {:?} / 1", records[2].count_argm());
-    // println!("e4: {:?} / 1", records[3].count_argm());
-    // println!("e5: {:?} / 4", records[4].count_argm());
-    // println!("e6: {:?} / 10", records[5].count_argm());
 
-    for i in 0..records.len() {
-        println!("{i}: count {}", records[i].count_argm());
-    }
-
-    // let answ = records.iter().fold(0, |a, x| a + x.count_argm());
-    // println!("p2: {answ}");
-}
-
-fn car(rec: &[Spring], gs: &[usize]) -> usize {
-    // println!("entering grp {:?}, with rec len {:?}", gs[0], rec.len());
-    let mut count = 0;
-    let rs = rec.len();
-    let ranges = get_ranges(rec, gs[0]);
-
-    // println!("grps rem: {:?}, ranges: {:?}", gs, ranges);
-
-    if gs.len() == 1 {
-        // println!("");
-        // println!("count: {}", ranges.len());
-        return ranges.iter().fold(0, |a, x| a + all_accounted_for(rec, x) as usize);
-    }
-
-    for r in ranges {
-        let beg = r[1] + 2;
-        if beg < rs {
-            // println!("chosen: {:?}", r);
-            count += car(&rec[beg..rs], &gs[1..gs.len()]);
-            // println!("<-- back to: {:?}", gs);
-        }
-    }
-
-    count
-}
-
-fn all_accounted_for(rec: &[Spring], r: &[usize; 2]) -> bool {
-    if r[1] + 1 < rec.len() {
-        ! rec[(r[1] + 1)..rec.len()].contains(&Spring::Damaged)
-    } else {
-        true
-    }
-}
-
-fn get_ranges(rec: &[Spring], g_size: usize) -> Vec<[usize; 2]> {
-    let mut ranges = Vec::new();
-    let mut count = 0;
-    let mut first_d = usize::MAX;
-
-    for i in 0..rec.len() {
-        match rec[i] {
-            Spring::Operational => count = 0,
-            Spring::Damaged => {
-                count += 1;
-                first_d = first_d.min(i);
-            },
-            Spring::Uknown => count += 1,
-        }
-
-        if count >= g_size {
-            if i == rec.len() - 1 || rec[i + 1] != Spring::Damaged {
-                ranges.push([i + 1 - g_size, i]);
-            }
-        }
-    }
-    ranges.into_iter().filter(|x| x[0] <= first_d).collect()
+    let answ = records.iter().fold(0, |a, x| a + x.count_argm());
+    println!("p2: {answ}");
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -153,7 +69,105 @@ impl Record {
     }
 
     fn count_argm(&self) -> usize {
-        car(&self.inner, &self.groups)
+        count_permutations(&self.inner, &self.groups)
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+struct State {
+    group: usize,
+    count: usize,
+    permutation: usize,
+}
+
+impl State {
+    fn new(group: usize, count: usize) -> Self {
+        Self {group, count, permutation: 1}
+    }
+
+    fn add_one(&mut self) {
+        self.count += 1;
+    }
+
+    fn check_op(&mut self, groups: &[usize]) {
+        if self.group < groups.len() && self.count == groups[self.group] {
+            self.group += 1;
+            self.count = 0;
+        } else if self.count > 0 {
+            // invalidate this state
+            self.group = groups.len() + 1;
+        }
+    }
+
+    fn is_valid(&self, groups: &[usize]) -> bool {
+        (self.group < groups.len() && self.count <= groups[self.group]) ||
+        (self.is_done(groups))
+    }
+
+    fn is_done(&self, groups: &[usize]) -> bool {
+        (self.group == groups.len() && self.count == 0) ||
+        (self.group == groups.len() - 1 && self.count == groups[self.group])
+    }
+}
+
+fn count_permutations(rec: &[Spring], groups: &[usize]) -> usize {
+    let mut states = Vec::new();
+    states.push(State::new(0, 0));
+
+    for s in rec {
+        match s {
+            Spring::Damaged => {
+                for s in states.iter_mut() {
+                    s.add_one();
+                }
+            },
+            Spring::Operational => {
+                for s in states.iter_mut() {
+                    s.check_op(groups);
+                }
+            },
+            Spring::Uknown => {
+                // new states where ? = #
+                let mut s1 = states.clone();
+                for s in s1.iter_mut() {
+                    s.add_one();
+                }
+                // originals where ? = .
+                for s in states.iter_mut() {
+                    s.check_op(groups);
+                }
+                // combine
+                states.append(&mut s1);
+            },
+        }
+        // keep only valid states
+        states = states.into_iter().filter(|x| x.is_valid(groups)).collect();
+        states = combine(states);
+    }
+
+    states.iter().filter(|x| x.is_done(groups))
+                 .fold(0, |a, x| a + x.permutation)
+}
+
+fn combine(states: Vec<State>) -> Vec<State> {
+    let mut new_states = Vec::new();
+    let mut removed: Vec<usize> = Vec::new();
+
+    for i in 0..states.len() {
+        if removed.contains(&i) {
+            continue;
+        }
+
+        let mut ns = states[i];
+        for j in (i + 1)..states.len() {
+            if states[i].group == states[j].group &&
+               states[i].count == states[j].count &&
+                   states[i].count == 0 {
+                ns.permutation += states[j].permutation;
+                removed.push(j);
+            }
+        }
+        new_states.push(ns);
+    }
+    new_states
+}
