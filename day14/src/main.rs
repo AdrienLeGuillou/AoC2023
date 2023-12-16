@@ -9,11 +9,13 @@ fn main() {
     println!("P1: {}", answ);
 
     // Part 2 ------------------------------------------------------------------
+    // I could have used a pathfinding algo like brent or tortoise instead
     let n_tot = 1000000000;
     let n_burnin = 1000;
     let n_rem = n_tot - n_burnin;
 
     // burn in: run some tilts to enter the cycle
+    //
     for _ in 0..n_burnin {
         pf.tilt_cycle();
     }
