@@ -133,11 +133,3 @@ impl Dir {
     }
 }
 
-#[derive(Debug)]
-pub struct VolumeMap<T> {
-    inner: Vec<T>,
-    pub xmax: usize,
-    pub ymax: usize,
-    pub zmax: usize,
-}
-
