@@ -2,6 +2,9 @@
 //
 // Quit botched and I don't understand everything as much as I want...
 // Will bo better next year
+//
+// I am happy with the use of `nalgebra` and the intercept shift code
+// I learned a ton here
 
 use nalgebra::{Matrix2, Vector2, Vector3};
 
